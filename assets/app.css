@@ -70,7 +70,7 @@ header.top h1 { color: var(--ivory); }
 
 label { display: block; font-weight: 600; font-size: .9rem; margin: 1rem 0 .35rem; color: var(--navy); }
 label .opt { font-weight: 400; color: var(--muted); }
-input[type="text"], input[type="tel"], input[type="email"], input[type="password"], input[type="date"], input[type="datetime-local"], select, textarea {
+input[type="text"], input[type="tel"], input[type="email"], input[type="password"], input[type="date"], input[type="month"], input[type="number"], input[type="datetime-local"], select, textarea {
   width: 100%;
   font: inherit;
   padding: .7rem .85rem;

@@ -155,7 +155,7 @@
     const inv = Array.isArray(r.invoice) ? r.invoice[0] : r.invoice;
     return `<article class="appt" data-id="${r.id}">
       <div>
-        <div class="who"><a href="#patients/${c.id}" style="color:inherit;text-decoration:none">${esc(c.full_name || "Unknown")}</a> ${badge(r.status)} ${inv ? badge(inv.status, { draft: "Invoice draft", issued: "Invoice issued", paid: "Paid", void: "Void" }) : ""}</div>
+        <div class="who"><a href="#patients/${c.id}" style="color:inherit;text-decoration:none">${esc(c.full_name || "Unknown")}</a> ${badge(r.status)} ${inv ? badge(inv.status, { draft: "Invoice draft", issued: "Unpaid", paid: "Paid", void: "Cancelled" }) : ""}</div>
         <div class="meta">+${esc(c.phone || "")} · ${c.preferred_lang === "ar" ? "Arabic" : "English"} · requested ${fmt(r.created_at)}</div>
         <div class="meta"><strong>Scheduled:</strong> ${fmt(r.scheduled_at)}</div>
         <div class="areas-line">${(r.area_codes || []).map(areaName).map(esc).join(", ") || "<span class='muted'>no areas</span>"}</div>
@@ -165,7 +165,7 @@
         ${r.status === "new" ? `<button class="btn ghost sm" data-act="contacted">Mark contacted</button>` : ""}
         ${["new", "contacted"].includes(r.status) ? `<button class="btn teal sm" data-act="confirm">Confirm…</button>` : ""}
         ${r.status === "confirmed" ? `<button class="btn sm" data-act="done">Mark done</button>` : ""}
-        ${["confirmed", "done"].includes(r.status) ? `<button class="btn ghost sm" data-act="invoice">${inv ? "Invoice " + esc(inv.invoice_no) : "Create invoice"}</button>` : ""}
+        ${["confirmed", "done"].includes(r.status) ? `<button class="btn ghost sm" data-act="invoice">${inv ? "Invoice " + esc(inv.invoice_no) : "Record invoice"}</button>` : ""}
         <button class="btn ghost sm" data-act="edit">Edit</button>
       </div>
       ${r.notes ? `<div class="notes">${esc(r.notes)}</div>` : ""}
@@ -264,80 +264,40 @@
     }
   };
 
-  // ---------- invoice editor ----------
+  // ---------- invoice record (copied from the clinic's invoice) ----------
   async function editInvoice(appt) {
     const c = appt.client || {};
     let inv = Array.isArray(appt.invoice) ? appt.invoice[0] : appt.invoice;
     if (inv) { const { data } = await sb.from("invoices").select("*").eq("id", inv.id).single(); inv = data; }
-    const items = inv ? inv.items : (appt.area_codes || []).map((code) => ({ code, name: areaName(code), qty: 1, unit_price: areaPrice(code) }));
     const b = openModal(`<form id="f">
-      <h2>${inv ? "Invoice " + esc(inv.invoice_no) : "New invoice"}</h2>
-      <div class="muted">${esc(c.full_name)} · +${esc(c.phone)} · ${fmt(appt.scheduled_at)}</div>
-      <label>Items</label>
-      <div class="inv-items" id="items"></div>
-      <button type="button" class="btn ghost sm" id="additem">+ Add line</button>
-      <div class="row" style="margin-top:.75rem">
-        <div><label>Discount (SAR)</label><input id="discount" type="number" min="0" step="0.01" value="${inv ? inv.discount : 0}"></div>
-        <div><label>Status</label><select id="status">${["draft", "issued", "paid", "void"].map((s) => `<option value="${s}" ${(inv ? inv.status : "issued") === s ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}</select></div>
+      <h2>${inv ? "Clinic invoice" : "Record clinic invoice"}</h2>
+      <div class="muted">${esc(c.full_name)} · +${esc(c.phone)} · ${fmt(appt.scheduled_at)}<br>${(appt.area_codes || []).map(areaName).map(esc).join(", ")}</div>
+      <p class="muted" style="margin-top:.75rem;font-size:.85rem">Copy the details from the invoice issued by the clinic.</p>
+      <div class="row">
+        <div><label>Clinic invoice no.</label><input id="no" type="text" maxlength="40" value="${esc(inv ? inv.invoice_no : "")}" required placeholder="e.g. 10234"></div>
+        <div><label>Invoice date</label><input id="date" type="date" value="${esc(inv && inv.issued_on ? inv.issued_on : todayStr())}" required></div>
+      </div>
+      <div class="row">
+        <div><label>Total (SAR, as printed, incl. VAT)</label><input id="total" type="number" min="0" step="0.01" value="${inv ? inv.total : ""}" required></div>
+        <div><label>Status</label><select id="status">${[["paid", "Paid"], ["issued", "Unpaid"], ["void", "Cancelled"]].map(([k, v]) => `<option value="${k}" ${(inv ? inv.status : "paid") === k ? "selected" : ""}>${v}</option>`).join("")}</select></div>
       </div>
       <label>Payment method</label>
       <select id="pm"><option value="">—</option>${["cash", "card", "transfer", "other"].map((s) => `<option value="${s}" ${inv && inv.payment_method === s ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}</select>
       <label>Notes</label><textarea id="notes" maxlength="500">${esc(inv ? inv.notes : "")}</textarea>
-      <div class="inv-total" id="totals"></div>
       <div id="m_msg" class="alert error hidden"></div>
-      <div class="btns">
-        ${inv ? `<button type="button" class="btn ghost" id="print">Print / PDF</button>` : ""}
-        <button type="button" class="btn ghost" id="m_cancel">Cancel</button><button class="btn" id="m_save">Save</button>
-      </div>
-    </form>`, true);
-    const box = $("#items", b);
-    function addLine(it) {
-      const d = document.createElement("div"); d.className = "line";
-      d.innerHTML = `<input class="name" placeholder="Service" value="${esc(it.name)}" data-code="${esc(it.code || "")}"><input class="qty" type="number" min="1" step="1" value="${it.qty}"><input class="price" type="number" min="0" step="0.01" value="${it.unit_price}"><button type="button" class="btn ghost sm rm" title="Remove">×</button>`;
-      box.appendChild(d);
-      $(".rm", d).addEventListener("click", () => { d.remove(); calc(); });
-    }
-    items.forEach(addLine);
-    const readItems = () => $$(".line", box).map((d) => ({ code: $(".name", d).dataset.code || null, name: $(".name", d).value.trim(), qty: Number($(".qty", d).value) || 1, unit_price: Number($(".price", d).value) || 0 }));
-    function calc() {
-      const its = readItems(); const sub = its.reduce((s, i) => s + i.qty * i.unit_price, 0);
-      const disc = Math.min(Number($("#discount", b).value) || 0, sub); const vat = (sub - disc) * 0.15;
-      $("#totals", b).innerHTML = `<span>Subtotal</span><span class="num">${sar(sub)}</span><span>Discount</span><span class="num">− ${sar(disc)}</span><span>VAT 15%</span><span class="num">${sar(vat)}</span><span class="big">Total</span><span class="num big">${sar(sub - disc + vat)}</span>`;
-    }
-    b.addEventListener("input", calc); calc();
-    $("#additem", b).addEventListener("click", () => addLine({ name: "", qty: 1, unit_price: 0 }));
+      <div class="btns"><button type="button" class="btn ghost" id="m_cancel">Cancel</button><button class="btn" id="m_save">Save</button></div>
+    </form>`);
     $("#m_cancel", b).addEventListener("click", closeModal);
-    if (inv) $("#print", b).addEventListener("click", () => printInvoice(inv, appt));
     $("#f", b).addEventListener("submit", async (e) => {
       e.preventDefault();
-      const its = readItems().filter((i) => i.name);
-      const patch = { items: its, discount: Number($("#discount", b).value) || 0, status: $("#status", b).value, payment_method: $("#pm", b).value || null, notes: $("#notes", b).value.trim() || null };
+      const patch = { invoice_no: $("#no", b).value.trim(), issued_on: $("#date", b).value || null, total: Number($("#total", b).value) || 0, items: [], status: $("#status", b).value, payment_method: $("#pm", b).value || null, notes: $("#notes", b).value.trim() || null };
       $("#m_save", b).disabled = true;
       const r = inv ? await sb.from("invoices").update(patch).eq("id", inv.id).select().single()
                     : await sb.from("invoices").insert(Object.assign({ appointment_id: appt.id, client_id: c.id }, patch)).select().single();
       $("#m_save", b).disabled = false;
-      if (r.error) { $("#m_msg", b).textContent = r.error.message; $("#m_msg", b).classList.remove("hidden"); return; }
-      closeModal(); toast(`Invoice ${r.data.invoice_no} saved.`, true); route();
+      if (r.error) { $("#m_msg", b).textContent = /unique/i.test(r.error.message) ? "That invoice number is already recorded." : r.error.message; $("#m_msg", b).classList.remove("hidden"); return; }
+      closeModal(); toast(`Invoice ${r.data.invoice_no} recorded.`, true); route();
     });
-  }
-  function printInvoice(inv, appt) {
-    const c = appt.client || {};
-    const rows = (inv.items || []).map((i) => `<tr><td>${esc(i.name)}</td><td class="n">${i.qty}</td><td class="n">${Number(i.unit_price).toFixed(2)}</td><td class="n">${(i.qty * i.unit_price).toFixed(2)}</td></tr>`).join("");
-    const w = window.open("", "_blank");
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(inv.invoice_no)}</title>
-      <style>body{font-family:Inter,Arial,sans-serif;color:#2b2f36;max-width:720px;margin:2rem auto;padding:0 1rem}h1{font-size:1.4rem;margin:0}.hd{display:flex;justify-content:space-between;border-bottom:2px solid #0f2238;padding-bottom:1rem;margin-bottom:1rem}.muted{color:#6b7280;font-size:.9rem}table{width:100%;border-collapse:collapse;margin-top:1rem}th,td{padding:.5rem;border-bottom:1px solid #e2dccf;text-align:left}th{font-size:.75rem;text-transform:uppercase;color:#6b7280}.n{text-align:right}.tot td{border:0;padding:.25rem .5rem}.tot .b{font-weight:700;font-size:1.1rem}@media print{button{display:none}}</style></head><body>
-      <div class="hd"><div><h1>${esc(C.CLINIC.name_en)}</h1><div class="muted">${esc(C.CLINIC.practitioner)}<br>${esc(C.CLINIC.location_en)}<br>${esc(C.CLINIC.phone_display)}</div></div>
-      <div style="text-align:right"><strong>TAX INVOICE</strong><br>${esc(inv.invoice_no)}<br><span class="muted">${fmtD(inv.created_at)}</span><br><span class="muted">Status: ${esc(inv.status)}</span></div></div>
-      <div><strong>Bill to:</strong> ${esc(c.full_name)}<br><span class="muted">+${esc(c.phone)} · Appointment ${fmt(appt.scheduled_at)}</span></div>
-      <table><thead><tr><th>Service</th><th class="n">Qty</th><th class="n">Unit (SAR)</th><th class="n">Amount (SAR)</th></tr></thead><tbody>${rows}</tbody>
-      <tfoot class="tot"><tr><td colspan="3" class="n">Subtotal</td><td class="n">${Number(inv.subtotal).toFixed(2)}</td></tr>
-      <tr><td colspan="3" class="n">Discount</td><td class="n">− ${Number(inv.discount).toFixed(2)}</td></tr>
-      <tr><td colspan="3" class="n">VAT ${(inv.vat_rate * 100).toFixed(0)}%</td><td class="n">${Number(inv.vat).toFixed(2)}</td></tr>
-      <tr><td colspan="3" class="n b">Total</td><td class="n b">SAR ${Number(inv.total).toFixed(2)}</td></tr></tfoot></table>
-      ${inv.notes ? `<p class="muted">${esc(inv.notes)}</p>` : ""}
-      <p class="muted" style="margin-top:2rem">Thank you for choosing ${esc(C.CLINIC.name_en)}.</p>
-      <button onclick="print()">Print</button></body></html>`);
-    w.document.close();
   }
 
   // ======================================================================
@@ -375,7 +335,7 @@
       <div class="stats"><div class="stat"><b>${(appts || []).length}</b><span>Appointments</span></div><div class="stat"><b>${(appts || []).filter((a) => a.status === "done").length}</b><span>Sessions done</span></div><div class="stat"><b>${sar(spent)}</b><span>Paid total</span></div><div class="stat"><b>${c.whatsapp_opt_in && !c.opted_out_at ? "Yes" : "No"}</b><span>Marketing opt-in</span></div></div>
       <div class="card tight"><strong>+${esc(c.phone)}</strong> · ${c.preferred_lang === "ar" ? "Arabic" : "English"} · patient since ${fmtD(c.created_at)}${c.notes ? `<div class="details">${esc(c.notes)}</div>` : ""}</div>
       <div class="card"><h2>Appointments</h2><div class="list" id="list">${(appts || []).length ? appts.map(apptCard).join("") : `<p class="muted">None yet.</p>`}</div></div>
-      <div class="card"><h2>Invoices</h2>${(invs || []).length ? `<table class="tbl"><thead><tr><th>No.</th><th>Date</th><th>Status</th><th class="num">Total</th></tr></thead><tbody>${invs.map((i) => `<tr><td>${esc(i.invoice_no)}</td><td>${fmtD(i.created_at)}</td><td>${badge(i.status, { draft: "Draft", issued: "Issued", paid: "Paid", void: "Void" })}</td><td class="num">${sar(i.total)}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">No invoices.</p>`}</div>
+      <div class="card"><h2>Invoices</h2>${(invs || []).length ? `<table class="tbl"><thead><tr><th>Clinic inv. no.</th><th>Date</th><th>Status</th><th class="num">Total</th></tr></thead><tbody>${invs.map((i) => `<tr><td>${esc(i.invoice_no)}</td><td>${i.issued_on ? fmtD(i.issued_on + "T12:00:00+03:00") : fmtD(i.created_at)}</td><td>${badge(i.status, { draft: "Draft", issued: "Unpaid", paid: "Paid", void: "Cancelled" })}</td><td class="num">${sar(i.total)}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">No invoices.</p>`}</div>
       <div class="card"><h2>Messages sent</h2>${(msgs || []).length ? msgs.map((m) => `<div class="details"><span class="pill">${esc(m.kind)}</span> ${fmt(m.created_at)}<br><span class="muted">${esc(m.body).slice(0, 140)}</span></div>`).join("") : `<p class="muted">None logged.</p>`}</div>`);
     bindApptActions(el, appts || []);
     $("#editp").addEventListener("click", () => {
@@ -428,16 +388,16 @@
         <div class="stat"><b>${newPatients || 0}</b><span>New patients</span></div>
       </div>
       <div class="stats" style="margin-top:.6rem">
-        <div class="stat"><b>${sar(rev)}</b><span>Revenue (paid, incl. VAT)</span></div>
+        <div class="stat"><b>${sar(rev)}</b><span>Paid invoices (incl. VAT)</span></div>
         <div class="stat"><b>${sar(net)}</b><span>Net of VAT</span></div>
-        <div class="stat"><b>${sar(vat)}</b><span>VAT collected</span></div>
-        <div class="stat"><b>${sar(outstanding)}</b><span>Issued, unpaid</span></div>
+        <div class="stat"><b>${sar(vat)}</b><span>VAT (15% of paid)</span></div>
+        <div class="stat"><b>${sar(outstanding)}</b><span>Unpaid</span></div>
       </div>
       <div class="two" style="margin-top:1.25rem">
         <div class="card" style="margin-top:0"><h2>By status</h2><table class="tbl">${Object.entries(STATUS).map(([k, v]) => `<tr><td>${badge(k)}</td><td class="num">${byStatus[k] || 0}</td></tr>`).join("")}</table></div>
         <div class="card" style="margin-top:0"><h2>Top services (confirmed + done)</h2><table class="tbl">${Object.entries(byArea).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([c, n]) => `<tr><td>${esc(areaName(c))}</td><td class="num">${n}</td></tr>`).join("") || `<tr><td class="muted">No data</td></tr>`}</table></div>
         <div class="card" style="margin-top:0"><h2>Payments by method</h2><table class="tbl">${Object.entries(byPm).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${sar(v)}</td></tr>`).join("") || `<tr><td class="muted">No paid invoices</td></tr>`}</table></div>
-        <div class="card" style="margin-top:0"><h2>Invoices</h2><table class="tbl">${["draft", "issued", "paid", "void"].map((s) => `<tr><td>${badge(s, { draft: "Draft", issued: "Issued", paid: "Paid", void: "Void" })}</td><td class="num">${(invs || []).filter((i) => i.status === s).length}</td></tr>`).join("")}</table></div>
+        <div class="card" style="margin-top:0"><h2>Invoices</h2><table class="tbl">${["paid", "issued", "void"].map((s) => `<tr><td>${badge(s, { draft: "Draft", issued: "Unpaid", paid: "Paid", void: "Cancelled" })}</td><td class="num">${(invs || []).filter((i) => i.status === s).length}</td></tr>`).join("")}</table></div>
       </div>`);
     $("#month").addEventListener("change", (e) => { sessionStorage.setItem("repMonth", e.target.value); route(); });
   };
@@ -579,7 +539,7 @@
       const a = areas.find((x) => x.code === code); const rows = per[code] || [];
       const d = $("#detail", el);
       d.innerHTML = `<div class="card" id="svc"><h2>${esc(a ? a.name_en : code)} — appointments made (${rows.length})</h2>
-        ${rows.length ? `<table class="tbl"><thead><tr><th>Patient</th><th>When</th><th>Status</th><th>Invoice</th></tr></thead><tbody>${rows.map((r) => { const inv = Array.isArray(r.invoice) ? r.invoice[0] : r.invoice; return `<tr class="click" onclick="location.hash='#appointments/${r.id}'"><td><strong>${esc(r.client?.full_name)}</strong><br><span class="muted">+${esc(r.client?.phone)}</span></td><td>${fmt(r.scheduled_at)}</td><td>${badge(r.status)}</td><td>${inv ? `${esc(inv.invoice_no)} ${badge(inv.status, { draft: "Draft", issued: "Issued", paid: "Paid", void: "Void" })}` : "—"}</td></tr>`; }).join("")}</tbody></table>` : `<p class="muted">No confirmed or completed appointments for this service yet.</p>`}</div>`;
+        ${rows.length ? `<table class="tbl"><thead><tr><th>Patient</th><th>When</th><th>Status</th><th>Invoice</th></tr></thead><tbody>${rows.map((r) => { const inv = Array.isArray(r.invoice) ? r.invoice[0] : r.invoice; return `<tr class="click" onclick="location.hash='#appointments/${r.id}'"><td><strong>${esc(r.client?.full_name)}</strong><br><span class="muted">+${esc(r.client?.phone)}</span></td><td>${fmt(r.scheduled_at)}</td><td>${badge(r.status)}</td><td>${inv ? `${esc(inv.invoice_no)} ${badge(inv.status, { draft: "Draft", issued: "Unpaid", paid: "Paid", void: "Cancelled" })}` : "—"}</td></tr>`; }).join("")}</tbody></table>` : `<p class="muted">No confirmed or completed appointments for this service yet.</p>`}</div>`;
       d.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };

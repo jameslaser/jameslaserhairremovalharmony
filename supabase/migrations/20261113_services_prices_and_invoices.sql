@@ -48,3 +48,8 @@ begin
   return new;
 end $$;
 create trigger invoices_totals before insert or update on public.invoices for each row execute function private.compute_invoice_totals();
+
+-- 2026-11-13 (later): invoices are copies of the clinic's own invoice, not generated here.
+alter table public.invoices add column if not exists issued_on date;
+alter table public.invoices alter column invoice_no drop default;
+-- compute_invoice_totals() now: with items → compute; without items → total as printed (VAT incl.), VAT back-calculated.
