@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Appointments — Admin</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0f2238">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap wide">
+      <div class="brand">
+        <strong>Appointments</strong>
+        <span>James Laser Hair Removal for Men · Admin</span>
+      </div>
+      <div id="userbox" class="hidden" style="display:flex;gap:.6rem;align-items:center;font-size:.85rem">
+        <span id="useremail" style="opacity:.8"></span>
+        <button class="btn ghost sm" id="logout" style="color:#fff;border-color:rgba(255,255,255,.3)">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Login -->
+  <section id="login" class="wrap">
+    <form class="card login" id="loginform">
+      <h2>Sign in</h2>
+      <p class="muted">Admin access only.</p>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" required>
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <div id="loginmsg" class="alert error hidden"></div>
+      <button class="btn block" type="submit">Sign in</button>
+      <p class="muted" style="margin-top:.75rem;font-size:.8rem"><a href="#" id="forgot">Forgot password?</a></p>
+    </form>
+  </section>
+
+  <!-- Dashboard -->
+  <main id="app" class="wrap wide hidden">
+    <div class="stats" id="stats"></div>
+
+    <div class="toolbar">
+      <select id="f_status">
+        <option value="open">Open (new + contacted + confirmed)</option>
+        <option value="new">New</option>
+        <option value="contacted">Contacted</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="done">Done</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="no_show">No-show</option>
+        <option value="all">All</option>
+      </select>
+      <input id="f_q" class="grow" type="text" placeholder="Search name or phone…">
+      <button class="btn ghost sm" id="refresh">Refresh</button>
+      <button class="btn teal sm" id="newappt">+ Add appointment</button>
+    </div>
+
+    <div id="msg" class="alert error hidden"></div>
+    <div id="list" class="list"></div>
+  </main>
+
+  <!-- Edit modal -->
+  <div id="modal" class="modal-bg hidden">
+    <form class="modal" id="editform">
+      <h2 id="m_title">Edit appointment</h2>
+      <div id="m_client" class="muted"></div>
+
+      <div id="m_newclient">
+        <label for="m_name">Client name</label>
+        <input id="m_name" type="text" maxlength="120">
+        <label for="m_phone">Mobile</label>
+        <input id="m_phone" type="tel" placeholder="05XXXXXXXX">
+      </div>
+
+      <label for="m_status">Status</label>
+      <select id="m_status">
+        <option value="new">New</option>
+        <option value="contacted">Contacted</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="done">Done</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="no_show">No-show</option>
+      </select>
+
+      <label for="m_when">Scheduled date & time</label>
+      <input id="m_when" type="datetime-local" step="900">
+
+      <label>Treatment areas</label>
+      <div id="m_areas" class="areas"></div>
+
+      <label for="m_notes">Notes</label>
+      <textarea id="m_notes" maxlength="500"></textarea>
+
+      <div id="m_msg" class="alert error hidden"></div>
+      <div class="btns">
+        <button type="button" class="btn ghost" id="m_cancel">Cancel</button>
+        <button type="submit" class="btn" id="m_save">Save</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/admin.js"></script>
+</body>
+</html>

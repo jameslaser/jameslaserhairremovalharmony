@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book an appointment — James Laser Hair Removal for Men</title>
+  <meta name="description" content="Request a laser hair removal appointment with Nurse James at Harmony Derma, Al Hamra, Riyadh.">
+  <meta name="theme-color" content="#0f2238">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <div class="brand">
+        <strong data-i18n="brand">James Laser Hair Removal for Men</strong>
+        <span data-i18n="brand_sub">Nurse-led · Harmony Derma, Al Hamra, Riyadh</span>
+      </div>
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button type="button" data-lang="en" class="active">EN</button>
+        <button type="button" data-lang="ar">عربي</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow" data-i18n="eyebrow">Appointment request</div>
+      <h1 data-i18n="title">Book your session</h1>
+      <p class="muted" data-i18n="intro">Choose the areas you'd like treated and a time that suits you. Nurse James will confirm your appointment on WhatsApp.</p>
+    </section>
+
+    <form id="booking" class="card" novalidate>
+      <label for="name" data-i18n="l_name">Full name</label>
+      <input id="name" name="name" type="text" maxlength="120" autocomplete="name" required>
+
+      <div class="row">
+        <div>
+          <label for="phone" data-i18n="l_phone">Mobile (WhatsApp)</label>
+          <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="05XXXXXXXX" autocomplete="tel" required>
+        </div>
+        <div>
+          <label for="lang" data-i18n="l_lang">Preferred language</label>
+          <select id="lang" name="lang">
+            <option value="ar">العربية</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+
+      <label data-i18n="l_areas">Treatment areas</label>
+      <div id="areas" class="areas"><p class="muted" data-i18n="loading">Loading…</p></div>
+
+      <div class="row">
+        <div>
+          <label for="date" data-i18n="l_date">Preferred date <span class="opt" data-i18n="optional">(optional)</span></label>
+          <input id="date" name="date" type="date">
+        </div>
+        <div>
+          <label for="time" data-i18n="l_time">Preferred time <span class="opt" data-i18n="optional">(optional)</span></label>
+          <select id="time" name="time"><option value="">—</option></select>
+        </div>
+      </div>
+      <p class="muted" id="hours" style="margin-top:.4rem"></p>
+
+      <label for="notes" data-i18n="l_notes">Notes <span class="opt" data-i18n="optional">(optional)</span></label>
+      <textarea id="notes" name="notes" maxlength="500" data-i18n-ph="ph_notes" placeholder="Anything we should know — skin type, medications, previous laser sessions…"></textarea>
+
+      <div id="msg" class="alert error hidden" role="alert"></div>
+
+      <button type="submit" class="btn block" id="submit" data-i18n="submit">Request appointment</button>
+      <p class="muted" style="margin-top:.75rem;font-size:.8rem" data-i18n="consent">By submitting you agree to be contacted on WhatsApp about this appointment.</p>
+    </form>
+
+    <section id="done" class="card success hidden">
+      <div class="tick">✓</div>
+      <h2 data-i18n="done_title">Request received</h2>
+      <p class="muted" data-i18n="done_text">Thank you. Nurse James will message you on WhatsApp to confirm the date and time.</p>
+      <a id="wa" class="btn wa" target="_blank" rel="noopener" data-i18n="wa_btn">Message us on WhatsApp</a>
+      <p style="margin-top:1rem"><a href="#" id="again" data-i18n="again">Make another request</a></p>
+    </section>
+
+    <footer>
+      <div id="f_loc"></div>
+      <div id="f_hours"></div>
+      <div style="margin-top:.4rem"><span data-i18n="practitioner">James Flores — Nurse | Specialist</span></div>
+    </footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/booking.js"></script>
+</body>
+</html>
