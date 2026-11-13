@@ -155,3 +155,54 @@ footer { margin-top: 2rem; font-size: .82rem; color: var(--muted); text-align: c
 
 .login { max-width: 400px; margin: 3rem auto; }
 .empty { text-align: center; padding: 2rem 1rem; color: var(--muted); }
+
+/* ---------- Admin portal layout ---------- */
+.portal { display: grid; grid-template-columns: 230px 1fr; min-height: calc(100vh - 62px); }
+.side { background: #fff; border-right: 1px solid var(--line); padding: 1rem .75rem; position: sticky; top: 0; align-self: start; height: 100vh; overflow: auto; }
+.side .sec { font-size: .7rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 1rem .6rem .35rem; }
+.side a { display: flex; align-items: center; gap: .5rem; padding: .55rem .7rem; border-radius: 9px; color: var(--charcoal); text-decoration: none; font-size: .92rem; }
+.side a.sub { padding-left: 1.6rem; font-size: .88rem; }
+.side a:hover { background: var(--ivory-2); }
+.side a.active { background: var(--navy); color: #fff; }
+.side a .n { margin-left: auto; background: var(--champagne); color: var(--navy); font-size: .7rem; font-weight: 700; padding: .05rem .45rem; border-radius: 999px; }
+.side a.active .n { background: #fff; }
+.content { padding: 1.25rem 1.5rem 3rem; min-width: 0; }
+.page-head { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between; }
+.page-head h1 { font-size: 1.4rem; }
+.menu-btn { display: none; background: transparent; border: 1px solid rgba(255,255,255,.3); color: #fff; border-radius: 8px; padding: .35rem .6rem; font-size: 1.1rem; cursor: pointer; }
+@media (max-width: 860px) {
+  .portal { grid-template-columns: 1fr; }
+  .side { position: fixed; inset: 62px 0 0 0; z-index: 40; height: auto; transform: translateX(-100%); transition: transform .15s; }
+  .side.open { transform: none; }
+  .menu-btn { display: inline-block; }
+  .content { padding: 1rem; }
+}
+
+table.tbl { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: .9rem; }
+table.tbl th, table.tbl td { padding: .6rem .75rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.tbl th { background: var(--ivory-2); font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+table.tbl tr:last-child td { border-bottom: 0; }
+table.tbl tr.click { cursor: pointer; }
+table.tbl tr.click:hover td { background: #fbf9f5; }
+table.tbl input, table.tbl select { padding: .4rem .5rem; font-size: .9rem; }
+.tbl-wrap { overflow-x: auto; margin-top: 1rem; }
+.num { text-align: right !important; font-variant-numeric: tabular-nums; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+.card h2 { margin-bottom: .75rem; }
+.card.tight { padding: .9rem 1rem; margin-top: 1rem; }
+.pill { font-size: .72rem; padding: .15rem .5rem; border-radius: 999px; background: var(--ivory-2); color: var(--muted); }
+.badge.draft { background: #e9e9ef; color: #3c3f4a; }
+.badge.issued { background: #fff4d6; color: #8a5a00; }
+.badge.paid { background: #e7f5ec; color: var(--ok); }
+.badge.void { background: #fbeae8; color: var(--danger); }
+.inv-items .line { display: grid; grid-template-columns: 1fr 60px 100px 32px; gap: .4rem; align-items: center; margin-bottom: .4rem; }
+.inv-items .line input { padding: .45rem .55rem; }
+.inv-total { display: grid; grid-template-columns: 1fr auto; gap: .25rem 1rem; margin-top: .75rem; font-size: .92rem; }
+.inv-total .big { font-weight: 700; font-size: 1.05rem; color: var(--navy); }
+.modal.wide { max-width: 640px; }
+.toggle { width: 42px; height: 24px; border-radius: 999px; background: #ccc; position: relative; cursor: pointer; border: 0; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .12s; }
+.toggle.on { background: var(--teal); } .toggle.on::after { left: 21px; }
+.details { margin-top: .5rem; font-size: .88rem; }
+pre.preview { white-space: pre-wrap; background: var(--ivory); padding: .75rem; border-radius: 8px; font: inherit; font-size: .9rem; }

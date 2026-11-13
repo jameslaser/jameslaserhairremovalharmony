@@ -6,7 +6,16 @@ appointment requests at Harmony Derma, Al Hamra, Riyadh.
 | Page | Who | What |
 |---|---|---|
 | `index.html` | Clients | Bilingual (EN/AR) booking form: name, WhatsApp number, treatment areas, preferred date/time, notes. |
-| `admin.html` | Nurse James | Sign in → see requests, filter/search, confirm/complete/cancel, edit schedule & areas, one-tap WhatsApp to the client, add walk-in bookings. |
+| `admin.html` | Nurse James | Admin portal (single admin). Sidebar: **Dashboard** · **Appointments** → Requests, Appointments & Invoices, Patients, Reports, Patient Messages · **Medical Services** (price list, active toggle, and the appointments made per service). |
+
+### Admin portal pages
+- **Dashboard** — new requests, today's schedule, confirmed upcoming, paid this month.
+- **Requests** — website requests (`new`/`contacted`); mark contacted, confirm with date/time, WhatsApp the patient, add walk-ins.
+- **Appointments & Invoices** — confirmed/done/cancelled list; create or edit a tax invoice per appointment (auto-numbered `INV-YYYY-NNNNN`, 15% VAT, discount, payment method, print/PDF).
+- **Patients** — searchable list; patient record with history, invoices, messages, marketing opt-in.
+- **Reports** — per month: appointments by status, no-show rate, new patients, revenue/VAT, top services, payments by method.
+- **Patient Messages** — approved templates (EN/AR, placeholders `{{name}} {{clinic}} {{date}} {{time}} {{areas}}`) → opens WhatsApp and logs the message.
+- **Medical Services** — service catalogue with price (SAR excl. VAT), duration, active toggle; click a service to see its booked appointments.
 
 ## How it works
 
