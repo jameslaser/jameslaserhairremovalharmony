@@ -10,8 +10,10 @@
 
   const STATUS = { new: "New", contacted: "Contacted", confirmed: "Confirmed", done: "Done", cancelled: "Cancelled", no_show: "No-show" };
   const OPEN = ["new", "contacted", "confirmed"];
-  const APPT_SELECT = "id,status,area_codes,scheduled_at,notes,created_at,updated_at,client:clients(id,full_name,phone,preferred_lang),invoice:invoices(id,invoice_no,status,total)";
+  const APPT_SELECT = "id,status,area_codes,scheduled_at,device,duration_min,notes,created_at,updated_at,client:clients(id,full_name,phone,preferred_lang),invoice:invoices(id,invoice_no,status,total)";
 
+  const DEVICES = C.CLINIC.devices;
+  const devName = (code) => (DEVICES.find((d) => d.code === code) || {}).name || "Unassigned";
   let areas = [];
   const areaName = (code) => (areas.find((a) => a.code === code) || {}).name_en || code;
   const areaPrice = (code) => Number((areas.find((a) => a.code === code) || {}).price || 0);
@@ -157,7 +159,7 @@
       <div>
         <div class="who"><a href="#patients/${c.id}" style="color:inherit;text-decoration:none">${esc(c.full_name || "Unknown")}</a> ${badge(r.status)} ${inv ? badge(inv.status, { draft: "Invoice draft", issued: "Unpaid", paid: "Paid", void: "Cancelled" }) : ""}</div>
         <div class="meta">+${esc(c.phone || "")} · ${c.preferred_lang === "ar" ? "Arabic" : "English"} · requested ${fmt(r.created_at)}</div>
-        <div class="meta"><strong>Scheduled:</strong> ${fmt(r.scheduled_at)}</div>
+        <div class="meta"><strong>Scheduled:</strong> ${fmt(r.scheduled_at)}${r.scheduled_at ? ` · ${r.duration_min || 30} min` : ""}${r.device ? ` · <span class="pill">${esc(devName(r.device))}</span>` : ""}</div>
         <div class="areas-line">${(r.area_codes || []).map(areaName).map(esc).join(", ") || "<span class='muted'>no areas</span>"}</div>
       </div>
       <div class="actions">
@@ -192,7 +194,8 @@
     return `<div class="areas">${[...groups].map(([g, list]) => `<div class="group"><h3>${esc(g)}</h3><div class="chips">${list.map((a) =>
       `<label class="chip" style="margin:0"><input type="checkbox" name="${name}" value="${esc(a.code)}" ${sel.has(a.code) ? "checked" : ""}><span>${esc(a.name_en)}</span></label>`).join("")}</div></div>`).join("")}</div>`;
   }
-  function editAppointment(row, presetStatus) {
+  function editAppointment(row, presetStatus, preset) {
+    preset = preset || {};
     const b = openModal(`<form id="f">
       <h2>${row ? "Edit appointment" : "New appointment"}</h2>
       ${row ? `<div class="muted">${esc(row.client?.full_name)} · +${esc(row.client?.phone)}</div>` : `
@@ -200,18 +203,28 @@
         <label>Mobile</label><input id="m_phone" type="tel" placeholder="05XXXXXXXX" required>`}
       <label>Status</label>
       <select id="m_status">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${(presetStatus || (row ? row.status : "confirmed")) === k ? "selected" : ""}>${v}</option>`).join("")}</select>
-      <label>Scheduled date &amp; time</label><input id="m_when" type="datetime-local" step="900" value="${row ? toLocalInput(row.scheduled_at) : ""}">
+      <div class="row">
+        <div><label>Scheduled date &amp; time</label><input id="m_when" type="datetime-local" step="900" value="${row ? toLocalInput(row.scheduled_at) : (preset.when || "")}"></div>
+        <div><label>Duration (min)</label><input id="m_dur" type="number" min="15" max="480" step="15" value="${row ? row.duration_min || 30 : C.CLINIC.default_duration_min}"></div>
+      </div>
+      <label>Machine</label>
+      <select id="m_dev"><option value="">— not assigned —</option>${DEVICES.map((d) => `<option value="${d.code}" ${(row ? row.device : preset.device) === d.code ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select>
       <label>Treatment areas</label>${areaChips("m_area", row ? row.area_codes : [])}
       <label>Notes</label><textarea id="m_notes" maxlength="500">${esc(row ? row.notes : "")}</textarea>
       <div id="m_msg" class="alert error hidden"></div>
       <div class="btns"><button type="button" class="btn ghost" id="m_cancel">Cancel</button><button class="btn" id="m_save">Save</button></div>
     </form>`);
     $("#m_cancel", b).addEventListener("click", closeModal);
+    if (!row) b.addEventListener("change", (e) => {
+      if (e.target.name !== "m_area") return;
+      const mins = $$('input[name="m_area"]:checked', b).reduce((s, i) => s + ((areas.find((a) => a.code === i.value) || {}).duration_min || 0), 0);
+      if (mins) $("#m_dur", b).value = Math.max(15, Math.ceil(mins / 15) * 15);
+    });
     $("#f", b).addEventListener("submit", async (e) => {
       e.preventDefault();
       const m = $("#m_msg", b); m.classList.add("hidden");
       const codes = $$('input[name="m_area"]:checked', b).map((i) => i.value);
-      const patch = { status: $("#m_status", b).value, scheduled_at: fromLocalInput($("#m_when", b).value), area_codes: codes, notes: $("#m_notes", b).value.trim() || null };
+      const patch = { status: $("#m_status", b).value, scheduled_at: fromLocalInput($("#m_when", b).value), area_codes: codes, notes: $("#m_notes", b).value.trim() || null, device: $("#m_dev", b).value || null, duration_min: Math.max(15, Number($("#m_dur", b).value) || 30) };
       if (patch.status === "confirmed" && !patch.scheduled_at) { m.textContent = "A confirmed appointment needs a date and time."; m.classList.remove("hidden"); return; }
       $("#m_save", b).disabled = true;
       let error;
@@ -222,7 +235,7 @@
         else {
           const r = await sb.rpc("book_appointment", { p_full_name: name, p_phone: phone, p_lang: "ar", p_area_codes: codes, p_preferred_at: patch.scheduled_at, p_notes: patch.notes });
           error = r.error;
-          if (!error && patch.status !== "new") ({ error } = await sb.from("appointments").update({ status: patch.status }).eq("id", r.data));
+          if (!error) ({ error } = await sb.from("appointments").update({ status: patch.status, device: patch.device, duration_min: patch.duration_min }).eq("id", r.data));
         }
       }
       $("#m_save", b).disabled = false;
@@ -235,6 +248,8 @@
   // APPOINTMENTS & INVOICES
   // ======================================================================
   PAGES.appointments = async (focusId) => {
+    const mode = sessionStorage.getItem("apptMode") || "board";
+    if (mode === "board" && !focusId) return boardPage();
     const q = new URLSearchParams(sessionStorage.getItem("apptFilter") || "");
     const status = q.get("status") || "upcoming"; const search = q.get("q") || "";
     let qb = sb.from("appointments").select(APPT_SELECT).order("scheduled_at", { ascending: status === "upcoming", nullsFirst: false }).limit(400);
@@ -244,7 +259,7 @@
     if (error) return fail(error);
     const rows = (data || []).filter((r) => !search || (r.client?.full_name || "").toLowerCase().includes(search.toLowerCase()) || (r.client?.phone || "").includes(search.replace(/\D/g, "")));
     const el = view(`
-      <div class="page-head"><h1>Appointments &amp; Invoices</h1><button class="btn teal sm" id="addappt">+ New appointment</button></div>
+      <div class="page-head"><h1>Appointments &amp; Invoices</h1><div style="display:flex;gap:.5rem;align-items:center">${modeSeg("list")}<button class="btn teal sm" id="addappt">+ New appointment</button></div></div>
       <div class="toolbar" style="margin-top:.75rem">
         <select id="f_status">
           ${[["upcoming", "Confirmed (upcoming)"], ["done", "Done"], ["cancelled", "Cancelled"], ["no_show", "No-show"], ["new", "New"], ["contacted", "Contacted"], ["all", "All"]].map(([k, v]) => `<option value="${k}" ${status === k ? "selected" : ""}>${v}</option>`).join("")}
@@ -252,7 +267,7 @@
         <input id="f_q" class="grow" type="text" placeholder="Search name or phone…" value="${esc(search)}">
       </div>
       <div class="list" id="list">${rows.length ? rows.map(apptCard).join("") : `<div class="card empty">No appointments match.</div>`}</div>`);
-    bindApptActions(el, rows);
+    bindApptActions(el, rows); bindModeSeg(el);
     $("#addappt").addEventListener("click", () => editAppointment(null));
     const saveFilter = () => { sessionStorage.setItem("apptFilter", new URLSearchParams({ status: $("#f_status").value, q: $("#f_q").value }).toString()); route(); };
     $("#f_status").addEventListener("change", saveFilter);
@@ -263,6 +278,68 @@
       else { const { data: one } = await sb.from("appointments").select(APPT_SELECT).eq("id", focusId).single(); if (one) editAppointment(one); }
     }
   };
+  const modeSeg = (cur) => `<div class="seg" id="modeseg"><button data-mode="board" class="${cur === "board" ? "active" : ""}">Board</button><button data-mode="list" class="${cur === "list" ? "active" : ""}">List</button></div>`;
+  const bindModeSeg = (el) => $$("#modeseg button", el).forEach((b) => b.addEventListener("click", () => { sessionStorage.setItem("apptMode", b.dataset.mode); location.hash = "#appointments"; route(); }));
+
+  // ---------- booking board (day view, 15-min blocks, one column per machine) ----------
+  async function boardPage() {
+    const day = sessionStorage.getItem("boardDay") || todayStr();
+    const [d0, d1] = riyadhDayBounds(day);
+    const { data, error } = await sb.from("appointments").select(APPT_SELECT).gte("scheduled_at", d0).lte("scheduled_at", d1).not("status", "in", "(cancelled)").order("scheduled_at");
+    if (error) return fail(error);
+    const rows = data || [];
+    const SLOT = 15, PX = 22;                     // 15-min slot = 22px tall
+    const open = C.CLINIC.open_hour * 60, close = C.CLINIC.close_hour * 60;
+    const slots = (close - open) / SLOT, H = slots * PX;
+    const cols = DEVICES.map((d) => Object.assign({}, d)).concat([{ code: null, short: "—", name: "Unassigned", color: "#8a8f99" }]);
+    const dayLabel = new Date(day + "T12:00:00+03:00").toLocaleDateString("en-GB", { timeZone: TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    const isFri = new Date(day + "T12:00:00+03:00").getDay() === C.CLINIC.closed_weekday;
+    const minsOf = (ts) => { const p = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(ts)); const h = Number(p.find((x) => x.type === "hour").value) % 24; return h * 60 + Number(p.find((x) => x.type === "minute").value); };
+    const t12 = (m) => `${((Math.floor(m / 60) + 11) % 12) + 1}:${String(m % 60).padStart(2, "0")} ${m >= 720 ? "PM" : "AM"}`;
+    const nowMin = day === todayStr() ? minsOf(new Date().toISOString()) : null;
+
+    function colHtml(c) {
+      const mine = rows.filter((r) => (r.device || null) === c.code);
+      let h = "";
+      for (let m = open; m < close; m += SLOT) h += `<div class="slot" style="top:${(m - open) / SLOT * PX}px;height:${PX}px" data-min="${m}" data-dev="${c.code || ""}" title="${t12(m)}"></div>`;
+      for (let m = open + 60; m < close; m += 60) h += `<div class="hour" style="top:${(m - open) / SLOT * PX}px"></div>`;
+      mine.forEach((r) => {
+        const st = minsOf(r.scheduled_at), dur = r.duration_min || 30;
+        const top = Math.max(0, (st - open) / SLOT * PX), hgt = Math.max(PX, dur / SLOT * PX) - 2;
+        h += `<div class="blk ${r.status}" data-id="${r.id}" style="top:${top}px;height:${hgt}px;background:${c.color}"><strong>${esc(r.client?.full_name)}</strong>${t12(st)} · ${dur} min<br>${(r.area_codes || []).map(areaName).map(esc).join(", ")}</div>`;
+      });
+      if (nowMin !== null && nowMin >= open && nowMin <= close) h += `<div class="now" style="top:${(nowMin - open) / SLOT * PX}px"></div>`;
+      return `<div class="col" style="height:${H}px;--slot:${PX}px">${h}</div>`;
+    }
+    const el = view(`
+      <div class="page-head"><h1>Booking board</h1><div style="display:flex;gap:.5rem;align-items:center">${modeSeg("board")}<button class="btn teal sm" id="addappt">+ New appointment</button></div></div>
+      <div class="board-head">
+        <button class="btn ghost sm" id="prev">‹</button><button class="btn ghost sm" id="today">Today</button><button class="btn ghost sm" id="next">›</button>
+        <span class="date">${esc(dayLabel)}</span>
+        <input type="date" id="pick" value="${day}" style="width:auto">
+        <span class="muted">${isFri ? "Closed Friday" : C.CLINIC.hours_en} · ${rows.length} booked</span>
+      </div>
+      <div class="board"><div class="grid" style="--cols:${cols.length}">
+        <div class="colhead"></div>
+        ${cols.map((c) => `<div class="colhead"><span class="av" style="background:${c.color}">${esc(c.short)}</span><span><strong>${esc(c.name)}</strong><small>${c.code ? "Laser room" : "No machine set"}</small></span><span class="cnt">${rows.filter((r) => (r.device || null) === c.code).length}</span></div>`).join("")}
+        <div class="timecol" style="height:${H}px">${Array.from({ length: slots / 4 + 1 }, (_, i) => `<div style="top:${i * 4 * PX}px">${t12(open + i * 60)}</div>`).join("")}</div>
+        ${cols.map(colHtml).join("")}
+      </div></div>`);
+    bindModeSeg(el);
+    const go = (d) => { sessionStorage.setItem("boardDay", d); route(); };
+    const shift = (n) => { const d = new Date(day + "T12:00:00+03:00"); d.setDate(d.getDate() + n); return d.toLocaleDateString("en-CA", { timeZone: TZ }); };
+    $("#prev", el).addEventListener("click", () => go(shift(-1))); $("#next", el).addEventListener("click", () => go(shift(1)));
+    $("#today", el).addEventListener("click", () => go(todayStr())); $("#pick", el).addEventListener("change", (e) => go(e.target.value));
+    $("#addappt", el).addEventListener("click", () => editAppointment(null, "confirmed", { when: `${day}T${String(C.CLINIC.open_hour).padStart(2, "0")}:00` }));
+    el.addEventListener("click", (e) => {
+      const blk = e.target.closest(".blk");
+      if (blk) { const r = rows.find((x) => x.id === blk.dataset.id); return editAppointment(r); }
+      const slot = e.target.closest(".slot");
+      if (slot) { const m = Number(slot.dataset.min); editAppointment(null, "confirmed", { when: `${day}T${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`, device: slot.dataset.dev || null }); }
+    });
+    // scroll to now / opening
+    const board = $(".board", el); if (nowMin !== null && nowMin > open) board.scrollTop = Math.max(0, (nowMin - open) / SLOT * PX - 120);
+  }
 
   // ---------- invoice record (copied from the clinic's invoice) ----------
   async function editInvoice(appt) {

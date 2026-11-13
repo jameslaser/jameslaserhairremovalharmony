@@ -206,3 +206,28 @@ table.tbl input, table.tbl select { padding: .4rem .5rem; font-size: .9rem; }
 .toggle.on { background: var(--teal); } .toggle.on::after { left: 21px; }
 .details { margin-top: .5rem; font-size: .88rem; }
 pre.preview { white-space: pre-wrap; background: var(--ivory); padding: .75rem; border-radius: 8px; font: inherit; font-size: .9rem; }
+
+/* ---------- Booking board ---------- */
+.board-head { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .75rem; }
+.board-head .date { font-weight: 600; color: var(--navy); min-width: 190px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: #fff; }
+.seg button { border: 0; background: transparent; padding: .4rem .8rem; font: inherit; font-size: .85rem; cursor: pointer; color: var(--charcoal); }
+.seg button.active { background: var(--navy); color: #fff; }
+.board { margin-top: 1rem; background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: auto; max-height: 72vh; }
+.board .grid { display: grid; grid-template-columns: 64px repeat(var(--cols), minmax(180px, 1fr)); min-width: 100%; }
+.board .colhead { position: sticky; top: 0; z-index: 3; background: #fff; border-bottom: 1px solid var(--line); padding: .6rem .75rem; display: flex; align-items: center; gap: .5rem; font-size: .88rem; }
+.board .colhead .av { width: 28px; height: 28px; border-radius: 50%; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 700; }
+.board .colhead small { display: block; color: var(--muted); font-size: .75rem; font-weight: 400; }
+.board .colhead .cnt { margin-left: auto; font-size: .72rem; background: var(--ivory-2); border-radius: 999px; padding: .1rem .5rem; }
+.board .timecol { position: relative; border-right: 1px solid var(--line); }
+.board .timecol div { position: absolute; right: .4rem; transform: translateY(-50%); font-size: .72rem; color: var(--muted); white-space: nowrap; }
+.board .col { position: relative; border-right: 1px solid var(--line); background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--slot) - 1px), #f1ede5 calc(var(--slot) - 1px), #f1ede5 var(--slot)); }
+.board .col .slot { position: absolute; left: 0; right: 0; cursor: pointer; }
+.board .col .slot:hover { background: rgba(42,157,143,.08); }
+.board .col .hour { position: absolute; left: 0; right: 0; border-top: 1px solid #ddd6c8; pointer-events: none; }
+.board .blk { position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: .3rem .5rem; font-size: .78rem; line-height: 1.25; color: #fff; overflow: hidden; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.12); border-left: 4px solid rgba(0,0,0,.25); }
+.board .blk strong { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.board .blk.done { opacity: .55; }
+.board .blk.new, .board .blk.contacted { background: #c48a1a !important; }
+.board .now { position: absolute; left: 0; right: 0; border-top: 2px solid #e0453a; z-index: 2; pointer-events: none; }
+.board .timecol div:first-child { transform: none; }

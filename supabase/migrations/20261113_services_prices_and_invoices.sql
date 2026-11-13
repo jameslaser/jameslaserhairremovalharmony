@@ -53,3 +53,9 @@ create trigger invoices_totals before insert or update on public.invoices for ea
 alter table public.invoices add column if not exists issued_on date;
 alter table public.invoices alter column invoice_no drop default;
 -- compute_invoice_totals() now: with items → compute; without items → total as printed (VAT incl.), VAT back-calculated.
+
+-- 2026-11-13: booking board — machine + duration per appointment
+alter table public.appointments
+  add column if not exists device text check (device is null or device in ('deka_again_pro_plus','clarity_ii')),
+  add column if not exists duration_min integer not null default 30 check (duration_min between 15 and 480);
+create index if not exists appointments_scheduled_idx on public.appointments (scheduled_at);

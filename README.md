@@ -11,7 +11,7 @@ appointment requests at Harmony Derma, Al Hamra, Riyadh.
 ### Admin portal pages
 - **Dashboard** — new requests, today's schedule, confirmed upcoming, paid this month.
 - **Requests** — website requests (`new`/`contacted`); mark contacted, confirm with date/time, WhatsApp the patient, add walk-ins.
-- **Appointments & Invoices** — confirmed/done/cancelled list; record the invoice issued by the clinic against each appointment (clinic invoice number, date, total, paid/unpaid, payment method).
+- **Appointments & Invoices** — **Booking board** (day view, 15-minute blocks, one column per laser machine: DEKA Again Pro Plus and Lutronic Clarity II; tap a slot to book, tap a block to edit) or list view; record the invoice issued by the clinic against each appointment (clinic invoice number, date, total, paid/unpaid, payment method).
 - **Patients** — searchable list; patient record with history, invoices, messages, marketing opt-in.
 - **Reports** — per month: appointments by status, no-show rate, new patients, revenue/VAT, top services, payments by method.
 - **Patient Messages** — approved templates (EN/AR, placeholders `{{name}} {{clinic}} {{date}} {{time}} {{areas}}`) → opens WhatsApp and logs the message.

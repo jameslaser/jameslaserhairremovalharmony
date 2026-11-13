@@ -17,7 +17,13 @@ window.APP_CONFIG = {
     // Booking slots offered on the public form (24h). Friday is excluded.
     open_hour: 13,
     close_hour: 22,
-    slot_minutes: 30,
+    slot_minutes: 15,
+    default_duration_min: 30,
+    // Laser machines — one column each on the booking board
+    devices: [
+      { code: "deka_again_pro_plus", short: "AG", name: "DEKA Again Pro Plus", color: "#2a9d8f" },
+      { code: "clarity_ii", short: "CL", name: "Lutronic Clarity II", color: "#1d6fb8" }
+    ],
     closed_weekday: 5, // 0=Sun ... 5=Fri
     timezone: "Asia/Riyadh"
   }
